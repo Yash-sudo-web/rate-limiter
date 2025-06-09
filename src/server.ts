@@ -5,6 +5,7 @@ import { rateLimiter } from './middlewares/rateLimiter';
 import { connectRedis } from './config/redis';
 
 const app: Application = express();
+app.set('trust proxy', 1);
 const PORT = 3000;
 
 connectDB();
