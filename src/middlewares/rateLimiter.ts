@@ -1,39 +1,35 @@
-import { Request, Response, NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
+import RedisStore from 'rate-limit-redis';
+import { Request, Response } from 'express';
 import redisClient from '../config/redis';
 
-const WINDOW_SIZE_IN_SECONDS = 60;
-const MAX_REQUESTS = 5;
+if (!redisClient.isOpen) {
+  redisClient.connect().catch(console.error);
+}
 
-export const rateLimiter = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const ip = req.ip;
-  const key = `ip:${ip}`;
+export const rateLimiter = rateLimit({
+  windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 60 * 1000,
+  max: Number(process.env.RATE_LIMIT_MAX_REQUESTS) || 5,
+  standardHeaders: true,
+  legacyHeaders: false,
 
-  (async () => {
-    try {
-      const requests = await redisClient.get(key);
+  keyGenerator: (req: Request, _res: Response): string => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const ip = Array.isArray(forwarded)
+      ? forwarded[0]
+      : forwarded?.split(',')[0].trim() || req.ip;
+    return ip || req.socket.remoteAddress || 'unknown';
+  },
 
-      if (requests) {
-        const requestCount = parseInt(requests);
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redisClient.sendCommand(args),
+    prefix: 'rl:',
+  }),
 
-        if (requestCount >= MAX_REQUESTS) {
-          return res
-            .status(429)
-            .json({ message: 'Too many requests. Please try again later.' });
-        }
-
-        await redisClient.incr(key);
-      } else {
-        await redisClient.set(key, '1', { EX: WINDOW_SIZE_IN_SECONDS });
-      }
-
-      next();
-    } catch (error) {
-      console.error('Rate limiter error:', error);
-      res.status(500).json({ message: 'Internal server error' });
-    }
-  })();
-};
+  handler: (_req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      message: 'Too many requests, please try again later.',
+    });
+  },
+});
