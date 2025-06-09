@@ -59,6 +59,14 @@ All endpoints are prefixed with `/api`.
 - **GET** `/api/books/:id`
 - **Response:** Book object or 404 if not found
 
+### Logs Analyzer
+- **GET** `/api/logs/analyze`
+- **Response:** Analyzed log data from `sample_api_logs.json`
+
+- **POST** `/api/logs/analyze`
+- **Body:** Array of log entries
+- **Response:** Analyzed log data
+
 ## Rate Limiting
 - Each IP is limited to 5 requests per minute.
 - Exceeding the limit returns HTTP 429: `Too many requests. Please try again later.`
