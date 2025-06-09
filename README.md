@@ -42,6 +42,8 @@ npm run dev
 The server will run on `http://localhost:3000` by default.
 
 ## API Endpoints
+Live URL - https://rate-limiter-1.onrender.com/
+
 All endpoints are prefixed with `/api`.
 
 ### Add a Book
